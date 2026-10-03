@@ -1,13 +1,17 @@
 # Tricktrons — Design Doc
 
-Status: **draft / brainstorm v0.1**. Nothing here is final. Everything is up for debate.
+> **You can't cheat existence.**
+
+Status: **draft / brainstorm v0.2**. Nothing here is final. Everything is up for debate.
+
+*Why "Tricktrons":* "trick" as in tricking electronics. Software gets tricked. Try tricking the hardware.
 
 ---
 
 ## 1. Core loop
 
 1. **Go outside.** Your map is dark until you physically travel and light it up.
-2. **Find a Tricktron.** Spawns depend on real geography — biome, remoteness, how farmed the area is.
+2. **Find a Tricktron.** Spawns depend on real geography — biome, remoteness, how farmed the area is. Your radar shows blips and a direction from far away; the exact spot only appears when you're close.
 3. **Mine it.** Your device builds a location-confidence score and solves a proof-of-work puzzle. High confidence → seconds. Low confidence → brutal.
 4. **Seal the claim.** The catch goes on-chain as a sealed commitment. Nobody knows what you caught.
 5. **Hold or sell.** Sell now (reveals it) or stay hidden until **Census Day**, when every seal opens and the market reprices.
@@ -18,10 +22,44 @@ The design principle behind everything: **reward getting somewhere hard, not wal
 
 ## 2. Tricktrons and supply
 
-- **100 species at launch.** Weak commons spawn everywhere; legendaries only in remote, matching habitats.
-- **Every species has a hard cap.** e.g. a common might cap at 1,000,000; a dragon-tier legendary at 10. Caps never increase.
-- **The TT *is* the coin.** There is no separate currency. Each TT carries a serial in its species' **TTC series** (e.g. *Magma Dragon #3/10*). The only way new TTs enter existence is by being mined.
+### 2.1 The creatures
+- Mythic creatures with a bit of Pokémon in them.
+- **Sizes:** small, human-size, door-size, building-size.
+- **Nocturnal TTs** only come out at night.
+- **v1 looks:** no 3D. A TT shows up as a card on your phone.
+
+### 2.2 Elements (6)
+**Fire, Water, Earth, Wind, Light, Dark.** A TT can have anywhere from 1 to all 6.
+
+### 2.3 Classes (6 + 1)
+| Class | Notes |
+|-------|-------|
+| Dragon | |
+| Serpent | |
+| Giant | golems live here |
+| Spirit | imps live here |
+| Beast | |
+| Winged | |
+| **National** | the 7th class, the surprise (below) |
+
+### 2.4 Nationals
+- **One per country: 195** (193 UN members + Vatican + Palestine).
+- The best of that country, styled in its flag colors and based on its national animal. Examples: **Somalia → leopard**, **Turkey → grey wolf (Asena)**.
+- A National spawns only inside its own country.
+- **Lions:** a lot of countries have a lion. Each lion gets its own lineage, element mix and style, e.g. Morocco's dark-maned Atlas lion (Earth), India's Asiatic forest lion, England's armored heraldic lions (Light), Singapore's half-fish Merlion (Water), Kenya's savanna lion (Fire/Earth).
+
+### 2.5 Numbers
+- **Species:** 63 element mixes (every non-empty combo of 6 elements: 2⁶ − 1) + 195 Nationals = **258**.
+- **Total TTs on Earth: 40,075,000**, one for every meter around the equator. That's roughly one per ~4 km² of land, so cheap ones really are everywhere.
+- **Hard cap.** The total never goes up. The TT *is* the coin: no separate currency. Each TT carries a serial in its **TTC series**. The only way a TT enters circulation is by being mined.
 - **Real-money value** comes purely from players trading TTs with each other.
+
+### 2.6 The randomizer
+Every TT is rolled by code at spawn: species, class, elements, size, nocturnal or not, stats, and **rarity**. Rarity is heavily weighted low, so the overwhelming majority are weak and cheap, and the top tier is vanishingly rare. Rolls are deterministic from the spawn seed (section 4.3), so anyone can verify them and nobody can reroll.
+
+### 2.7 Getting one
+- **Finding:** Dragon Radar style. Blips and a direction from far away, the exact spot only when you're close.
+- **Catching:** pull out your phone and be close. Passing the hardware checks (section 9) makes the mine easy.
 
 ---
 
@@ -125,8 +163,8 @@ Commit-reveal is a proven pattern (e.g. ENS used it for name auctions).
 - The chain logs only: `??? · <geohash> · block <n>` — no name, no stats, no art, **zero hints** beyond the code.
 - **The child spawns where the parents' habitats overlap**: Fire × Water → hot springs/geysers; Ice × Rock → glaciers; Cave × Flying → cliff caves.
 - The first person to mine it **reveals** it: the `???` becomes a real dex entry, with their wallet permanently credited as discoverer.
-- Bred species can be very low cap (even one-of-one).
-- The dex grows forever.
+- Bred TTs come out of the fixed 40,075,000 total — breeding never adds supply. A bred species can be very low cap (even one-of-one).
+- The dex can grow past 258, but the number of TTs on Earth never does.
 
 ---
 
@@ -226,6 +264,8 @@ Grab one.
 - **Confidence-score weights:** how to set and update them without making the system gameable or unfair to old phones.
 - **Census timing:** fixed date vs. rolling; what happens to unrevealed claims if a holder loses their key.
 - **Breeding rate:** how often `???` drops appear without diluting value.
+- **Ranking:** how the randomizer's rarity weights map to tiers and value.
+- **Lions:** finalize how each country's lion is made distinct.
 - **`???` discoverability:** zero hints vs. revealing one more geohash character if unclaimed for a while.
 - **Privacy:** routes are public on-chain by design — how much trail detail is published, and when.
 - **Legal / app stores:** real-money assets trigger financial, gambling and app-store rules depending on country.

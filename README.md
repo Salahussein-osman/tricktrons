@@ -1,6 +1,8 @@
 # Tricktrons 🌋
 
-**Pokémon GO meets Bitcoin — but you can't mine from your couch.**
+**You can't cheat existence.**
+
+Pokémon GO meets Bitcoin — but you can't mine from your couch.
 
 Tricktrons (TTs) are creatures that live in the real world. To get one you have to physically go where it lives — and the rare ones live where humans don't: volcanoes, glaciers, caves, mountain villages with one bar of signal. Every species is hard-capped, every TT is a scarce on-chain asset worth real money, and faking your location is designed to cost more than just buying the plane ticket.
 
@@ -8,7 +10,8 @@ Tricktrons (TTs) are creatures that live in the real world. To get one you have 
 
 ## The pitch in 30 seconds
 
-- **100 species at launch**, each with a hard supply cap. Commons are everywhere; there might be 10 dragons on Earth, ever.
+- **40,075,000 TTs, ever** — one for every meter around the equator. Hard cap. Every TT is randomized at spawn, and rarity is weighted way low: cheap ones everywhere, top tier almost never.
+- **258 species:** 63 mixes of 6 elements (Fire, Water, Earth, Wind, Light, Dark) + **195 Nationals**, one per country, built from its flag and national animal.
 - **Spawns follow real geography.** Fire types near volcanoes, ice types on glaciers. The wilder the place (fewer people, fewer cell towers, darker at night), the rarer the spawns.
 - **Your map starts dark.** You light it by physically traveling, cell by cell. The light fades — you can only mine where you're currently lit.
 - **Claims are sealed.** Nobody knows what you caught until **Census Day**, once a year, when every seal opens at once. Flexers get vindicated or exposed.
