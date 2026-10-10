@@ -29,10 +29,10 @@ The design principle behind everything: **reward getting somewhere hard, not wal
 - **v1 looks:** no 3D. A TT shows up as a card on your phone.
 
 ### 2.2 Elements (6)
-**Fire, Water, Earth, Wind, Light, Dark.** A TT can have anywhere from 1 to all 6.
+**Fire, Water, Earth, Wind, Light, Dark.** Every TT has exactly **one** element and one type: a Fire Dragon, a Dark Spirit. (Mixes like Fire/Water/Earth dropped 2026-10-10.)
 
-### 2.3 Classes (6 + 1)
-| Class | Notes |
+### 2.3 Types (6 + 1)
+| Type | Notes |
 |-------|-------|
 | Dragon | |
 | Serpent | |
@@ -40,22 +40,25 @@ The design principle behind everything: **reward getting somewhere hard, not wal
 | Spirit | imps live here |
 | Beast | |
 | Winged | |
-| **National** | the 7th class, the surprise (below) |
+| **National** | the 7th type, the surprise (below) |
 
 ### 2.4 Nationals
 - **One per country: 195** (193 UN members + Vatican + Palestine).
 - The best of that country, styled in its flag colors and based on its national animal. Examples: **Somalia → leopard**, **Turkey → grey wolf (Asena)**.
 - A National spawns only inside its own country.
-- **Lions:** a lot of countries have a lion. Each lion gets its own lineage, element mix and style, e.g. Morocco's dark-maned Atlas lion (Earth), India's Asiatic forest lion, England's armored heraldic lions (Light), Singapore's half-fish Merlion (Water), Kenya's savanna lion (Fire/Earth).
+- **Element = what the country is known for** (Somalia → Water, the longest coastline in mainland Africa; Egypt → Light, Ra). When a country fits more than one, it gets the element used least so far, so the six stay balanced (32–33 each). All 195 are in `engine/src/nationals.ts` with a one-line reason each.
+- **Lions:** a lot of countries have a lion. Each lion gets its own lineage, element and style, e.g. Morocco's dark-maned Atlas lion (Earth), India's Asiatic forest lion, England's armored heraldic lions (Light), Singapore's half-fish Merlion (Water), Kenya's savanna lion (Earth).
 
 ### 2.5 Numbers
-- **Species:** 63 element mixes (every non-empty combo of 6 elements: 2⁶ − 1) + 195 Nationals = **258**.
-- **Total TTs on Earth: 40,075,000**, one for every meter around the equator. That's roughly one per ~4 km² of land, so cheap ones really are everywhere.
+- **Species:** 6 elements × 6 types = 36, + 195 Nationals = **231**.
+- **Rarity caps (2026-10-10):** 555 Legendary · 555,000 Rare · 554,444,445 Common = 555,000,000. Spawn odds follow the caps (a Legendary is ~1 spawn in a million). When a tier is all claimed, its TTs stop showing on the radar.
+- **Serials + founder's #555 (2026-10-10):** every claimed TT gets a serial inside its tier (first Legendary claimed = Legendary #1). **#555 of each tier belongs to the founder**, public from day one: 3 TTs out of 555,000,000. Their species is rolled from the public seed `founder|<tier>|555`, so nobody picked them. Players get Legendary #1–#554.
+- **Total TTs on Earth: 555,000,000**, after Hash555 (was 40,075,000, changed 2026-10-10). Spawns are offers that come and go weekly; a TT only counts once it's claimed, and after the 555,000,000th claim no more can be made.
 - **Hard cap.** The total never goes up. The TT *is* the coin: no separate currency. Each TT carries a serial in its **TTC series**. The only way a TT enters circulation is by being mined.
 - **Real-money value** comes purely from players trading TTs with each other.
 
 ### 2.6 The randomizer
-Every TT is rolled by code at spawn: species, class, elements, size, nocturnal or not, stats, and **rarity**. Rarity is heavily weighted low, so the overwhelming majority are weak and cheap, and the top tier is vanishingly rare. Rolls are deterministic from the spawn seed (section 4.3), so anyone can verify them and nobody can reroll.
+Every TT is rolled by code at spawn: species, type, element, size, nocturnal or not, stats, and **rarity**. Rarity is heavily weighted low, so the overwhelming majority are weak and cheap, and the top tier is vanishingly rare. Rolls are deterministic from the spawn seed (section 4.3), so anyone can verify them and nobody can reroll.
 
 ### 2.7 Getting one
 - **Finding:** Dragon Radar style. Blips and a direction from far away, the exact spot only when you're close.
@@ -97,7 +100,7 @@ Each cell gets a **wildness score** from open datasets:
 Rarity scales with wildness. Dragons don't spawn in city centers. The sweet spot includes places with **people but little infrastructure** — mountain villages, rural towns.
 
 ### 4.3 Deterministic spawns
-`spawn = H(cell_id ‖ epoch ‖ world_seed)` → species, stats, rarity. Anyone can verify a spawn was real; nobody can invent one.
+`spawn = Hash555(cell_id ‖ week ‖ week_seed)` → species, stats, rarity. Each week has its own **secret** seed; only its sealed envelope `Hash555("seal" ‖ seed)` is published. During the year the radar is the only way to see where TTs are. On **Census Day** every seed of the year opens, and anyone can replay every week and check that no spawn was invented or moved.
 
 ### 4.4 Depletion
 Every catch in a cell scares the rest off: the spawn rate drops and recovers slowly. Farmed areas go dead, pushing players further out. Cities are mostly dead zones by design.
@@ -163,8 +166,8 @@ Commit-reveal is a proven pattern (e.g. ENS used it for name auctions).
 - The chain logs only: `??? · <geohash> · block <n>` — no name, no stats, no art, **zero hints** beyond the code.
 - **The child spawns where the parents' habitats overlap**: Fire × Water → hot springs/geysers; Ice × Rock → glaciers; Cave × Flying → cliff caves.
 - The first person to mine it **reveals** it: the `???` becomes a real dex entry, with their wallet permanently credited as discoverer.
-- Bred TTs come out of the fixed 40,075,000 total — breeding never adds supply. A bred species can be very low cap (even one-of-one).
-- The dex can grow past 258, but the number of TTs on Earth never does.
+- Bred TTs come out of the fixed 555,000,000 total — breeding never adds supply. A bred species can be very low cap (even one-of-one).
+- The dex can grow past 231, but the number of TTs on Earth never does.
 
 ---
 
@@ -228,9 +231,9 @@ Our own sealed pocket device (think Pokéball Plus × hardware wallet): OSNMA-ca
 
 ## 10. On-chain record
 
-The blockchain records every TT, its owner, and **the route that led to each claim**. Anyone can replay a route and call cap. On Census Day the routes behind every revealed claim become public.
+The blockchain records every TT, its owner, and the **last 30 m** of the route that led to each claim, stored relative to the TT and shown as a constellation on pitch black (no map, no coordinates). Anonymous all year; on Census Day the week seeds open, names are revealed, and every claim can be replayed.
 
-Chain choice: **an established chain / L2**, not our own. (Axie's own sidechain with few validators lost ~$600M in the Ronin hack.)
+Chain choice: **on hold (2026-10-10)**. Claims live in a database for now. Never our own chain (Axie's own sidechain with few validators lost ~$600M in the Ronin hack); Holochain (no fees) is the candidate once there are real players to hold copies.
 
 ---
 
@@ -262,12 +265,12 @@ Grab one.
 - **Anomaly map resolution:** public maps (e.g. EMAG2) are coarse; high-res maps exist only for some areas (Etna has one). Crowdsource maps from Catchers?
 - **Shrine logistics:** permits, theft, vandalism, weather, maintenance on volcanoes.
 - **Confidence-score weights:** how to set and update them without making the system gameable or unfair to old phones.
-- **Census timing:** fixed date vs. rolling; what happens to unrevealed claims if a holder loses their key.
+- **Census timing:** decided 2026-10-10: end of the ISO year (Monday after its last week). Still open: what happens to unrevealed claims if a holder loses their key.
 - **Breeding rate:** how often `???` drops appear without diluting value.
-- **Ranking:** how the randomizer's rarity weights map to tiers and value.
+- **Ranking:** decided 2026-10-10: tier caps 555 / 555,000 / 554,444,445 (§2.5), spawn odds follow the caps. Still open: what makes one TT stronger or more useful than another (power does nothing yet).
 - **Lions:** finalize how each country's lion is made distinct.
 - **`???` discoverability:** zero hints vs. revealing one more geohash character if unclaimed for a while.
-- **Privacy:** routes are public on-chain by design — how much trail detail is published, and when.
+- **Privacy:** decided 2026-10-10: only the last 30 m, relative to the TT, as a constellation on black; names and places open on Census Day.
 - **Legal / app stores:** real-money assets trigger financial, gambling and app-store rules depending on country.
 - **Safety:** spawn placement near hazardous terrain.
 - **Accessibility:** what's fun for people who can't travel far.

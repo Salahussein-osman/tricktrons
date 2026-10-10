@@ -1,0 +1,13 @@
+{
+  "name": "@tricktrons/engine",
+  "version": "0.0.1",
+  "description": "Deterministic Tricktrons spawn engine",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=23.6" },
+  "bin": { "tt": "src/cli.ts" },
+  "scripts": {
+    "test": "node --test \"test/*.test.ts\"",
+    "tt": "node src/cli.ts"
+  }
+}

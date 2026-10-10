@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tricktrons Radar</title>
+<style>
+  :root { --bg: #0b0f0c; --screen: #1f6b3a; --grid: #c9f5d6; --ink: #e8f5ec; --dim: #8fae99; --hot: #ffcf33; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 15px/1.4 system-ui, sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: .04em; }
+  .dim { color: var(--dim); font-size: 13px; }
+  canvas { width: 100%; aspect-ratio: 1; display: block; touch-action: manipulation; cursor: pointer; }
+  #status { min-height: 1.4em; }
+  .card { border: 1px solid #2c3a30; border-radius: 10px; padding: 12px; }
+  .card h2 { font-size: 14px; margin: 0 0 6px; color: var(--dim); font-weight: 600; }
+  #key { font: 600 22px/1.2 ui-monospace, monospace; color: var(--hot); letter-spacing: .05em; user-select: all; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { padding: 4px 0; border-top: 1px solid #1c251f; }
+  li:first-child { border-top: 0; }
+  [hidden] { display: none !important; }
+  form { display: flex; gap: 8px; margin-top: 10px; }
+  input { flex: 1; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid #2c3a30;
+    background: #111813; color: var(--ink); font: inherit; }
+  button { padding: 10px 14px; border-radius: 8px; border: 0; background: var(--hot); color: #111;
+    font: 600 15px system-ui, sans-serif; cursor: pointer; }
+  #claimMsg { margin-top: 8px; }
+  #pad { display: grid; grid-template-areas: ". u ." "l . r" ". d ."; gap: 6px;
+    width: 180px; margin: 0 auto; }
+  #pad button { padding: 12px 0; font-size: 18px; touch-action: manipulation; }
+  a { color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>TRICKTRONS RADAR</h1>
+    <span class="dim" id="week"></span>
+  </header>
+
+  <canvas id="scope" width="720" height="720" aria-label="radar"></canvas>
+  <div class="dim">tap the radar to zoom · <span id="scale"></span></div>
+  <div id="pad" hidden>
+    <button data-k="ArrowUp" style="grid-area:u">▲</button>
+    <button data-k="ArrowLeft" style="grid-area:l">◀</button>
+    <button data-k="ArrowRight" style="grid-area:r">▶</button>
+    <button data-k="ArrowDown" style="grid-area:d">▼</button>
+  </div>
+  <div id="status" class="dim">finding you…</div>
+  <div id="census" class="dim"></div>
+  <a href="/claims" class="dim">claims this year →</a>
+
+  <section class="card" id="here" hidden>
+    <h2>You're on it. Claim code</h2>
+    <div id="key"></div>
+    <div class="dim" id="hereWhat"></div>
+    <form id="claimForm">
+      <input id="claimName" maxlength="40" placeholder="your name (hidden until Census Day)" autocomplete="nickname">
+      <button>Claim it</button>
+    </form>
+  </section>
+  <div id="claimMsg"></div>
+
+  <section class="card" id="nearCard" hidden>
+    <h2>Close by</h2>
+    <ul id="nearList"></ul>
+  </section>
+</main>
+
+<script>
+// Position comes from the phone's GPS. For testing at a desk: ?at=lat,lon
+// pins a fake position, and the arrow keys walk it 10 m per press.
+const $ = (id) => document.getElementById(id);
+const ZOOMS = [3000, 1000, 250];   // metres from centre to edge
+let zoom = 0;
+let me = null;                     // { lat, lon }
+let data = null;                   // last /api/radar answer
+let lastFetch = 0, pending = false, animating = false;
+let trail = [];                    // recent positions, stays on this device
+const remember = () => { trail.push([me.lat, me.lon]); if (trail.length > 300) trail.shift(); };
+
+const fakeAt = new URLSearchParams(location.search).get("at");
+if (fakeAt) {
+  const [lat, lon] = fakeAt.split(",").map(Number);
+  me = { lat, lon };
+  $("status").textContent = "test position (arrows walk 10 m)";
+  const walk = (key) => {
+    const step = 10 / 111320;
+    const d = { ArrowUp: [step, 0], ArrowDown: [-step, 0],
+      ArrowLeft: [0, -step / Math.cos(me.lat * Math.PI / 180)],
+      ArrowRight: [0, step / Math.cos(me.lat * Math.PI / 180)] }[key];
+    if (!d) return false;
+    me = { lat: me.lat + d[0], lon: me.lon + d[1] };
+    remember();
+    refresh(true);
+    return true;
+  };
+  addEventListener("keydown", (e) => { if (walk(e.key)) e.preventDefault(); });
+  // On-screen arrows for phones (no keyboard).
+  $("pad").hidden = false;
+  $("pad").addEventListener("click", (e) => { if (e.target.dataset.k) walk(e.target.dataset.k); });
+  refresh(true);
+} else if (!navigator.geolocation) {
+  $("status").textContent = "this browser can't share location";
+} else {
+  navigator.geolocation.watchPosition(
+    (p) => {
+      me = { lat: p.coords.latitude, lon: p.coords.longitude };
+      remember();
+      $("status").textContent = `GPS ±${Math.round(p.coords.accuracy)} m`;
+      refresh(false);
+    },
+    (err) => { $("status").textContent = "no location: " + err.message + " (needs https or localhost)"; },
+    { enableHighAccuracy: true, maximumAge: 2000 },
+  );
+}
+
+// Ask the server what's visible from here. GPS fires often; at most every 2 s.
+async function refresh(force) {
+  if (!me || pending || (!force && Date.now() - lastFetch < 2000)) return;
+  pending = true; lastFetch = Date.now();
+  try {
+    const r = await fetch(`/api/radar?lat=${me.lat}&lon=${me.lon}`);
+    if (!r.ok) throw new Error(r.status);
+    data = await r.json();
+    render();
+  } catch (e) {
+    $("status").textContent = "radar offline (" + e.message + ")";
+  } finally { pending = false; }
+}
+
+$("scope").addEventListener("click", () => { zoom = (zoom + 1) % ZOOMS.length; render(); });
+
+const describe = (tt) =>
+  `${tt.rarity} ${tt.element} ${tt.type} · ${tt.size}${tt.nocturnal ? " · nocturnal" : ""} · power ${tt.power}`;
+const metres = (m) => m >= 1000 ? (m / 1000).toFixed(1) + " km" : Math.round(m) + " m";
+
+function render() {
+  if (!data) return;
+  $("week").textContent = data.week;
+  const days = Math.ceil((new Date(data.census) - Date.now()) / 86_400_000);
+  $("census").textContent = `Census Day in ${days} day${days === 1 ? "" : "s"}: every seal opens`;
+  $("scale").textContent = "edge = " + metres(ZOOMS[zoom]);
+  draw();
+
+  const here = data.blips.find((b) => b.level === "here");
+  $("here").hidden = !here;
+  if (here) {
+    if (claiming?.cell !== here.cell) $("claimMsg").textContent = "";
+    claiming = here;
+    $("key").textContent = here.cell + "-" + here.key;
+    $("hereWhat").textContent = describe(here.tt);
+  }
+
+  const near = data.blips.filter((b) => b.level === "near");
+  $("nearCard").hidden = !near.length;
+  $("nearList").innerHTML = near.map((b) =>
+    `<li>${metres(b.distance)} ${compass(b.bearing)} · ${describe(b.tt)}</li>`).join("");
+
+  const far = data.blips.filter((b) => b.level === "far").length;
+  if (!here && !near.length) $("status").textContent =
+    data.blips.length ? `${far} blip${far === 1 ? "" : "s"} in range · nearest ~${metres(data.blips[0].distance)} ${compass(data.blips[0].bearing)}`
+                      : "nothing in range this week";
+}
+
+// Claiming. The route sent is your trail as metres east/north of the TT — never
+// GPS coordinates. The server keeps only the last 30 m of it.
+let claiming = null;
+$("claimForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!claiming) return;
+  const t = claiming, k = 111320 * Math.cos(t.lat * Math.PI / 180);
+  const route = trail.map(([lat, lon]) => [(lon - t.lon) * k, (lat - t.lat) * 111320]);
+  const r = await fetch("/api/claim", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ code: t.cell + "-" + t.key, name: $("claimName").value, route }) });
+  const out = await r.json();
+  $("claimMsg").textContent = out.ok ? "Claimed. It's yours, sealed until Census Day." : out.error;
+  if (out.ok) { trail = []; refresh(true); }
+});
+
+const compass = (deg) => ["N","NE","E","SE","S","SW","W","NW"][Math.round(deg / 45) % 8];
+
+function draw() {
+  const c = $("scope"), g = c.getContext("2d");
+  const W = c.width, R = W / 2 - 8, cx = W / 2, cy = W / 2;
+  const css = getComputedStyle(document.documentElement);
+  const col = (v) => css.getPropertyValue(v).trim();
+  g.clearRect(0, 0, W, W);
+
+  // The screen: a round green glass with a square grid, like the Dragon Radar.
+  g.save();
+  g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
+  g.fillStyle = col("--screen"); g.fillRect(0, 0, W, W);
+  g.strokeStyle = col("--grid"); g.globalAlpha = 0.35; g.lineWidth = 2;
+  for (let i = -4; i <= 4; i++) {
+    g.beginPath(); g.moveTo(cx + i * R / 4, 0); g.lineTo(cx + i * R / 4, W); g.stroke();
+    g.beginPath(); g.moveTo(0, cy + i * R / 4); g.lineTo(W, cy + i * R / 4); g.stroke();
+  }
+  g.globalAlpha = 1;
+
+  // You: a small triangle in the middle. North is up.
+  g.fillStyle = col("--ink");
+  g.beginPath(); g.moveTo(cx, cy - 14); g.lineTo(cx - 10, cy + 10); g.lineTo(cx + 10, cy + 10); g.closePath(); g.fill();
+
+  // Blips. Far ones are fuzzy dots; near ones sharp; the one you're on pulses gold.
+  const range = ZOOMS[zoom];
+  for (const b of data.blips) {
+    const r = Math.min(b.distance / range, 1.02) * R;
+    const a = (b.bearing - 90) * Math.PI / 180;
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    if (b.level === "far") {
+      g.fillStyle = col("--hot"); g.globalAlpha = 0.55;
+      g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 1;
+    } else {
+      const size = b.level === "here" ? 16 + 4 * Math.sin(Date.now() / 200) : 11;
+      g.fillStyle = col("--hot"); g.strokeStyle = col("--bg"); g.lineWidth = 3;
+      g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+  }
+  g.restore();
+
+  // Bezel.
+  g.strokeStyle = "#3a4a3f"; g.lineWidth = 10;
+  g.beginPath(); g.arc(cx, cy, R + 3, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = col("--dim"); g.font = "600 22px system-ui"; g.textAlign = "center";
+  g.fillText("N", cx, 30);
+
+  // Keep pulsing while you're on a TT. One loop at a time.
+  if (data.blips.some((b) => b.level === "here") && !animating) {
+    animating = true;
+    requestAnimationFrame(() => { animating = false; draw(); });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tricktrons Claims</title>
+<style>
+  :root { --bg: #000; --ink: #e8f5ec; --dim: #7d8a81; --star: #ffffff; --hot: #ffcf33; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: .04em; }
+  a, .dim { color: var(--dim); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  figure { margin: 0; }
+  canvas { width: 100%; aspect-ratio: 1; display: block; background: var(--bg); border: 1px solid #161616; border-radius: 8px; }
+  figcaption { margin-top: 4px; font-size: 12px; color: var(--dim); }
+  figcaption b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>CLAIMS</h1>
+    <a href="/">← radar</a>
+  </header>
+  <p class="dim">Every claim is the last 30 m of someone's walk to a TT. No map, no names, no place. On Census Day they open.</p>
+  <div class="grid" id="grid"></div>
+  <p class="dim" id="empty" hidden>No claims yet.</p>
+</main>
+<script>
+// Each route is metres east/north of the TT, oldest point first. The TT is the
+// last point. Drawn north-up, scaled so the whole 30 m fits.
+function draw(canvas, route) {
+  const g = canvas.getContext("2d"), W = canvas.width, pad = 18, R = 30;
+  const css = getComputedStyle(document.documentElement);
+  const col = (v) => css.getPropertyValue(v).trim();
+  const px = ([x, y]) => [W / 2 + x / R * (W / 2 - pad), W / 2 - y / R * (W / 2 - pad)];
+  // Centre the walk on its own middle, so the TT isn't always in the same place.
+  const mx = route.reduce((a, p) => a + p[0], 0) / route.length || 0;
+  const my = route.reduce((a, p) => a + p[1], 0) / route.length || 0;
+  const pts = route.map(([x, y]) => px([x - mx, y - my]));
+
+  g.strokeStyle = col("--star"); g.globalAlpha = 0.35; g.lineWidth = 1.5;
+  g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke();
+  g.globalAlpha = 1; g.fillStyle = col("--star");
+  for (const [x, y] of pts) { g.beginPath(); g.arc(x, y, 2.5, 0, Math.PI * 2); g.fill(); }
+  if (pts.length) {
+    const [x, y] = pts[pts.length - 1];
+    g.fillStyle = col("--hot"); g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill();
+  }
+}
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+fetch("/api/claims").then((r) => r.json()).then((claims) => {
+  document.getElementById("empty").hidden = claims.length > 0;
+  const grid = document.getElementById("grid");
+  for (const c of claims) {
+    const fig = document.createElement("figure");
+    const caption = c.sealed
+      ? `${esc(c.week)} · sealed`
+      : `<b>${esc(c.name)}</b> · ${esc(c.week)}<br>${c.tt ? esc(c.tt.rarity + " " + c.tt.element + " " + c.tt.type) : ""} · ${esc(c.cell)}`;
+    fig.innerHTML = `<canvas width="300" height="300"></canvas><figcaption>${caption}</figcaption>`;
+    grid.append(fig);
+    draw(fig.querySelector("canvas"), c.route);
+  }
+});
+</script>
+</body>
+</html>
